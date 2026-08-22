@@ -33,16 +33,6 @@
 
   .conteudo { padding: 12px; padding-bottom: 90px; max-width: 640px; margin: 0 auto; transition: max-width 0.15s; }
 
-  /* ---------- Responsivo: telas médias e grandes viram grid de colunas ---------- */
-  @media (min-width: 700px) {
-    .topo-inner, .conteudo, .rodape-inner { max-width: 920px; }
-    #listaItens { grid-template-columns: 1fr 1fr; }
-  }
-  @media (min-width: 1150px) {
-    .topo-inner, .conteudo, .rodape-inner { max-width: 1320px; }
-    #listaItens { grid-template-columns: 1fr 1fr 1fr; }
-  }
-
   .resumo { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
   .resumo-card { border-radius: 10px; padding: 10px; text-align: center; background: #fff; border: 1px solid var(--cinza-borda); }
   .resumo-card.baixo { background: var(--laranja-bg); border-color: var(--laranja-bg); }
@@ -64,6 +54,19 @@
 
   #listaItens { display: grid; grid-template-columns: 1fr; gap: 8px; align-items: start; }
   #listaItens .vazio { grid-column: 1 / -1; }
+
+  /* ---------- Responsivo: telas médias e grandes viram grid de colunas ---------- */
+  /* Precisa vir DEPOIS da regra base do #listaItens acima — CSS resolve empate de
+     especificidade pela ordem no arquivo, então se isso subir de novo pro topo,
+     a coluna única volta a vencer mesmo em tela grande. */
+  @media (min-width: 700px) {
+    .topo-inner, .conteudo, .rodape-inner { max-width: 920px; }
+    #listaItens { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 1150px) {
+    .topo-inner, .conteudo, .rodape-inner { max-width: 1320px; }
+    #listaItens { grid-template-columns: 1fr 1fr 1fr; }
+  }
   .item-card { background: #fff; border: 1px solid var(--cinza-borda); border-radius: 10px; padding: 10px 12px; margin-bottom: 0; }
   .item-card.baixo { border-left: 4px solid var(--laranja); background: var(--laranja-bg); }
   .item-card.zerado { border-left: 4px solid var(--vermelho); background: var(--vermelho-bg); }
