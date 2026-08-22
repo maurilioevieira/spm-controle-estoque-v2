@@ -27,11 +27,21 @@
   body { margin: 0; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--cinza-bg); color: var(--texto); }
 
   .topo { background: var(--primary); padding: 16px; color: #fff; position: sticky; top: 0; z-index: 10; }
-  .topo-inner { max-width: 640px; margin: 0 auto; }
+  .topo-inner { max-width: 640px; margin: 0 auto; transition: max-width 0.15s; }
   .topo .marca { color: #E3B778; font-size: 13px; letter-spacing: 0.5px; margin: 0; }
   .topo h1 { font-size: 22px; font-weight: 600; margin: 2px 0 0; }
 
-  .conteudo { padding: 12px; padding-bottom: 90px; max-width: 640px; margin: 0 auto; }
+  .conteudo { padding: 12px; padding-bottom: 90px; max-width: 640px; margin: 0 auto; transition: max-width 0.15s; }
+
+  /* ---------- Responsivo: telas médias e grandes viram grid de colunas ---------- */
+  @media (min-width: 700px) {
+    .topo-inner, .conteudo, .rodape-inner { max-width: 920px; }
+    #listaItens { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 1150px) {
+    .topo-inner, .conteudo, .rodape-inner { max-width: 1320px; }
+    #listaItens { grid-template-columns: 1fr 1fr 1fr; }
+  }
 
   .resumo { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
   .resumo-card { border-radius: 10px; padding: 10px; text-align: center; background: #fff; border: 1px solid var(--cinza-borda); }
@@ -52,7 +62,9 @@
   .filtro-chip { flex-shrink: 0; font-size: 15px; padding: 7px 14px; border-radius: 20px; background: #fff; border: 1px solid var(--cinza-borda); color: var(--texto-suave); cursor: pointer; }
   .filtro-chip.ativo { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-  .item-card { background: #fff; border: 1px solid var(--cinza-borda); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  #listaItens { display: grid; grid-template-columns: 1fr; gap: 8px; align-items: start; }
+  #listaItens .vazio { grid-column: 1 / -1; }
+  .item-card { background: #fff; border: 1px solid var(--cinza-borda); border-radius: 10px; padding: 10px 12px; margin-bottom: 0; }
   .item-card.baixo { border-left: 4px solid var(--laranja); background: var(--laranja-bg); }
   .item-card.zerado { border-left: 4px solid var(--vermelho); background: var(--vermelho-bg); }
   .item-topo { display: flex; justify-content: space-between; align-items: center; }
@@ -241,7 +253,7 @@
 
 <script>
   // ATENÇÃO: cole aqui a URL de implantação do Apps Script (Implantar > Nova implantação > App da Web)
-  const EXEC_URL = 'https://script.google.com/macros/s/AKfycbx9Ey6d9zEWOuKEq5JGmHPLa0nLeMANcNofPKpdxTjxD8RalPZeP70VIz5MxjIs0sxIkQ/exec';
+  const EXEC_URL = 'https://script.google.com/macros/s/AKfycbx9Ey6d9zEWOuKEq5JGmHPLa0nLeMANcNofPKpdxTjxD8RalPZeP7OVIz5MxjIs0sxIkQ/exec';
 
   let categoriaAtiva = 'Todos';
   let itemSelecionadoId = null;
