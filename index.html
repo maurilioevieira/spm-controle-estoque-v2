@@ -178,22 +178,41 @@
       <div id="listaHistorico"><p class="vazio">Carregando...</p></div>
     </div>
 
-    <!-- ---------- Tela: Relatório por período ---------- -->
+    <!-- ---------- Tela: Relatórios (PDF) ---------- -->
     <div id="telaRelatorio" style="display:none">
-      <div class="rel-linha">
-        <div class="campo">
-          <label>De</label>
-          <input type="date" id="relDataInicio">
-        </div>
-        <div class="campo">
-          <label>Até</label>
-          <input type="date" id="relDataFim">
-        </div>
+      <div class="filtros" id="relatorioTipos">
+        <div class="filtro-chip ativo" data-tipo="historico">Histórico</div>
+        <div class="filtro-chip" data-tipo="zerados">Zerados</div>
+        <div class="filtro-chip" data-tipo="estoque">Em estoque</div>
+        <div class="filtro-chip" data-tipo="completo">Estoque completo</div>
       </div>
-      <button class="btn btn-primario" id="btnGerarRelatorio" style="width:100%; margin-bottom:16px;">Buscar movimentações</button>
-      <div id="relResumo"></div>
-      <div id="relLista"></div>
-      <button class="btn" id="btnExportarPDF" style="width:100%; margin-top:12px; display:none;">Exportar PDF</button>
+
+      <!-- Histórico: é o único com filtro de período, porque é o único que representa
+           movimentações ao longo do tempo. Os outros três são "fotografias" do estoque
+           agora — não existe um "estoque zerado entre 01/08 e 15/08", só existe agora. -->
+      <div id="relBlocoHistorico">
+        <div class="rel-linha">
+          <div class="campo">
+            <label>De</label>
+            <input type="date" id="relDataInicio">
+          </div>
+          <div class="campo">
+            <label>Até</label>
+            <input type="date" id="relDataFim">
+          </div>
+        </div>
+        <button class="btn btn-primario" id="btnGerarRelatorio" style="width:100%; margin-bottom:16px;">Buscar movimentações</button>
+        <div id="relResumo"></div>
+        <div id="relLista"></div>
+        <button class="btn" id="btnExportarPDF" style="width:100%; margin-top:12px; display:none;">Exportar PDF</button>
+      </div>
+
+      <!-- Zerados / Em estoque / Completo: sem período, é sempre a foto de agora -->
+      <div id="relBlocoSnapshot" style="display:none">
+        <p class="hist-meta" id="relSnapshotDescricao" style="margin-bottom:12px;"></p>
+        <div id="relSnapshotLista"></div>
+        <button class="btn btn-primario" id="btnExportarSnapshotPDF" style="width:100%; margin-top:12px; display:none;">Exportar PDF</button>
+      </div>
     </div>
 
   </div>
@@ -571,6 +590,106 @@
     });
 
     doc.save('relatorio-estoque-' + dataInicio + '-a-' + dataFim + '.pdf');
+  };
+
+  // ===================== MENU DE TIPOS DE RELATÓRIO =====================
+
+  let tipoRelatorioAtivo = 'historico';
+  let ultimoSnapshot = [];
+
+  const CONFIG_SNAPSHOT = {
+    zerados: {
+      titulo: 'SPM — Itens com estoque zerado',
+      descricao: 'Itens que estão com estoque atual igual a zero, agora.',
+      filtro: item => item.status === 'zerado',
+      arquivo: 'estoque-zerados'
+    },
+    estoque: {
+      titulo: 'SPM — Itens em estoque',
+      descricao: 'Itens com estoque atual maior que zero (inclui os que estão em nível baixo).',
+      filtro: item => item.estoqueAtual > 0,
+      arquivo: 'estoque-em-estoque'
+    },
+    completo: {
+      titulo: 'SPM — Estoque completo',
+      descricao: 'Todos os itens cadastrados, independente do status.',
+      filtro: () => true,
+      arquivo: 'estoque-completo'
+    }
+  };
+
+  document.querySelectorAll('#relatorioTipos .filtro-chip').forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll('#relatorioTipos .filtro-chip').forEach(c => c.classList.remove('ativo'));
+      chip.classList.add('ativo');
+      tipoRelatorioAtivo = chip.dataset.tipo;
+      trocarTipoRelatorio();
+    };
+  });
+
+  function trocarTipoRelatorio() {
+    const ehHistorico = tipoRelatorioAtivo === 'historico';
+    document.getElementById('relBlocoHistorico').style.display = ehHistorico ? 'block' : 'none';
+    document.getElementById('relBlocoSnapshot').style.display = ehHistorico ? 'none' : 'block';
+    if (!ehHistorico) carregarSnapshot(tipoRelatorioAtivo);
+  }
+
+  async function carregarSnapshot(tipo) {
+    const cfg = CONFIG_SNAPSHOT[tipo];
+    document.getElementById('relSnapshotDescricao').textContent = cfg.descricao;
+    document.getElementById('relSnapshotLista').innerHTML = '<p class="vazio">Carregando...</p>';
+    document.getElementById('btnExportarSnapshotPDF').style.display = 'none';
+
+    try {
+      const r = await api('getItens');
+      const itens = r.dados.filter(cfg.filtro);
+      ultimoSnapshot = itens;
+      renderizarSnapshot(itens);
+      document.getElementById('btnExportarSnapshotPDF').style.display = itens.length ? 'block' : 'none';
+    } catch (e) {
+      document.getElementById('relSnapshotLista').innerHTML = '<p class="vazio" style="color:var(--vermelho-texto)">Erro: ' + e.message + '</p>';
+    }
+  }
+
+  function renderizarSnapshot(itens) {
+    const lista = document.getElementById('relSnapshotLista');
+    if (!itens.length) { lista.innerHTML = '<p class="vazio">Nenhum item encontrado.</p>'; return; }
+    lista.innerHTML = itens.map(i => `
+      <div class="hist-linha">
+        <span class="hist-tipo">${i.nome}</span>
+        <div class="hist-meta">${i.categoria} · ${i.unidade} · estoque: ${i.estoqueAtual} (mínimo ${i.estoqueMinimo})</div>
+      </div>`).join('');
+  }
+
+  document.getElementById('btnExportarSnapshotPDF').onclick = () => {
+    if (!ultimoSnapshot.length) return;
+    const cfg = CONFIG_SNAPSHOT[tipoRelatorioAtivo];
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const agora = new Date();
+
+    doc.setFontSize(14);
+    doc.text(cfg.titulo, 14, 16);
+    doc.setFontSize(10);
+    doc.text('Gerado em: ' + agora.toLocaleString('pt-BR'), 14, 23);
+
+    const linhas = ultimoSnapshot.map(i => [
+      i.nome,
+      i.categoria,
+      i.unidade,
+      String(i.estoqueAtual),
+      String(i.estoqueMinimo)
+    ]);
+
+    doc.autoTable({
+      startY: 28,
+      head: [['Item', 'Categoria', 'Unidade', 'Estoque atual', 'Estoque mínimo']],
+      body: linhas,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [11, 79, 71] }
+    });
+
+    doc.save(cfg.arquivo + '-' + agora.toISOString().slice(0, 10) + '.pdf');
   };
 </script>
 </body>
