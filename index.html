@@ -287,15 +287,44 @@
   function getToken() { return localStorage.getItem('estoque_token'); }
   function getNomeUsuario() { return localStorage.getItem('estoque_nome') || ''; }
 
+  function esperar_(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  /**
+   * Faz a chamada e tenta de novo sozinha se a rede falhar ou a resposta não
+   * for JSON válido (comum em wifi instável, onde o pedido às vezes não chega
+   * até o Google e às vezes volta cortado no meio). Tentativa de erro real do
+   * servidor (json.sucesso === false) NÃO é repetida — isso é um erro de
+   * negócio (ex: "PIN incorreto", "estoque insuficiente"), não de conexão.
+   */
   async function api(action, payload) {
     payload = payload || {};
     payload.action = action;
     if (action !== 'login') payload.token = getToken();
 
-    const res = await fetch(EXEC_URL, { method: 'POST', body: JSON.stringify(payload) });
-    const json = await res.json();
-    if (!json.sucesso) throw new Error(json.erro || 'Erro desconhecido.');
-    return json;
+    const TENTATIVAS = 3;
+    for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa++) {
+      try {
+        const res = await fetch(EXEC_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const texto = await res.text();
+        let json;
+        try {
+          json = JSON.parse(texto);
+        } catch (erroParse) {
+          throw new Error('RESPOSTA_INVALIDA');
+        }
+        if (!json.sucesso) throw new Error(json.erro || 'Erro desconhecido.');
+        return json;
+      } catch (erro) {
+        const eDeConexao = erro.message === 'RESPOSTA_INVALIDA' || erro.name === 'TypeError';
+        const ultimaTentativa = tentativa === TENTATIVAS;
+        if (eDeConexao && !ultimaTentativa) {
+          await esperar_(700 * tentativa); // espera um pouco mais a cada nova tentativa
+          continue;
+        }
+        if (eDeConexao) throw new Error('Conexão instável agora. Verifique o wifi/dados e tente de novo.');
+        throw erro; // erro de negócio do servidor, mostra a mensagem original
+      }
+    }
   }
 
   function mostrarToast(msg) {
