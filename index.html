@@ -322,9 +322,27 @@
           continue;
         }
         if (eDeConexao) throw new Error('Conexão instável agora. Verifique o wifi/dados e tente de novo.');
+        if (action !== 'login' && ehErroDeSessao_(erro.message)) forcarLogout_(erro.message);
         throw erro; // erro de negócio do servidor, mostra a mensagem original
       }
     }
+  }
+
+  function ehErroDeSessao_(mensagem) {
+    return !!mensagem && (mensagem.indexOf('Sessão inválida') !== -1 || mensagem.indexOf('Sessão expirada') !== -1);
+  }
+
+  /**
+   * Chamado quando o token de 12h expirou (ou é inválido por qualquer motivo).
+   * Sem isso, o app ficava preso mostrando "sessão inválida" sem dar um jeito
+   * claro de resolver — agora volta sozinho pra tela de PIN, já explicando o motivo.
+   */
+  function forcarLogout_(mensagem) {
+    localStorage.removeItem('estoque_token');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('telaLogin').style.display = 'flex';
+    document.getElementById('loginPin').value = '';
+    document.getElementById('loginErro').textContent = mensagem + ' Digite o PIN pra continuar.';
   }
 
   function mostrarToast(msg) {
